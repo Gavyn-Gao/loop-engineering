@@ -20,6 +20,7 @@ function emptySignals() {
     mcp: { present: false },
     worktreeEvidence: { present: false },
     registry: { present: false },
+    loopActivity: { present: false, evidence: [] },
   };
 }
 
@@ -49,7 +50,7 @@ test('computeScore: full L2 signals', () => {
   assert.ok(score >= 58 && score < 78);
 });
 
-test('computeScore: L3 requires verifier and high score', () => {
+test('computeScore: L3 requires verifier, high score, and real loop activity (v1.4)', () => {
   const s = emptySignals();
   s.stateFile = { present: true, paths: ['STATE.md'] };
   s.triage = { present: true };
@@ -62,9 +63,26 @@ test('computeScore: L3 requires verifier and high score', () => {
   s.mcp = { present: true };
   s.worktreeEvidence = { present: true };
   s.registry = { present: true };
+  s.loopActivity = { present: true, evidence: ['git:state update', 'state:STATE.md'] };
   const { level, score } = computeScore(s);
   assert.equal(level, 'L3');
   assert.ok(score >= 78);
+});
+
+test('computeScore: high structure without activity caps at L2 (v1.4 dynamic signal)', () => {
+  const s = emptySignals();
+  s.stateFile = { present: true, paths: ['STATE.md'] };
+  s.triage = { present: true };
+  s.loopConfig = { present: true, path: 'LOOP.md' };
+  s.agentsMd = { present: true };
+  s.skills = { count: 3, loopSkills: ['loop-triage', 'minimal-fix', 'loop-verifier'] };
+  s.verifier = { present: true };
+  s.safety = { loopMdMentionsSafety: true, safetyDocPresent: true };
+  s.github = { present: true, workflows: true };
+  s.registry = { present: true };
+  // deliberately no loopActivity
+  const { level } = computeScore(s);
+  assert.equal(level, 'L2');
 });
 
 test('auditProject: empty directory scores low', async () => {

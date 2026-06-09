@@ -13,6 +13,7 @@ const PATTERN_STARTERS = {
     'dependency-sweeper': 'dependency-sweeper',
     'post-merge-cleanup': 'post-merge-cleanup',
     'changelog-drafter': 'changelog-drafter',
+    'issue-triage': 'minimal-loop', // reuses daily-triage starter + new skill can be added manually or via templates later
 };
 const TOOL_SUFFIX = {
     grok: '',
@@ -33,6 +34,7 @@ const STATE_FILES = {
     'dependency-sweeper': 'dependency-sweeper-state.md',
     'post-merge-cleanup': 'post-merge-state.md',
     'changelog-drafter': 'changelog-drafter-state.md',
+    'issue-triage': 'issue-triage-state.md',
 };
 function parseArgs(argv) {
     let pattern = 'daily-triage';
@@ -170,6 +172,11 @@ function firstLoopCommand(pattern, tool) {
             claude: '/loop 1d $changelog-scan + draft-release-notes — write RELEASE_NOTES_DRAFT.md and update state. Human approves before publish.',
             codex: 'Automation daily: changelog-scan + draft-release-notes → RELEASE_NOTES_DRAFT.md. Human review.',
         },
+        'issue-triage': {
+            grok: '/loop 2h Run issue-triage. Update issue-triage-state.md. Propose labels and priority only. No auto-apply. Human reviews the needs-human slice.',
+            claude: '/loop 2h $issue-triage — update issue-triage-state.md. Suggest labels on allowlisted areas only. Report mode week one.',
+            codex: 'Automation 2h: issue-triage → issue-triage-state.md. Propose only.',
+        },
     };
     return cmds[pattern][tool];
 }
@@ -188,6 +195,7 @@ Patterns:
   dependency-sweeper
   post-merge-cleanup
   changelog-drafter (new low-risk release notes pattern)
+  issue-triage (new low-risk issue queue health companion to daily triage)
 
 Options:
   -p, --pattern   Pattern to scaffold

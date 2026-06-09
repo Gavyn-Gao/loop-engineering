@@ -1,6 +1,6 @@
 {
   "name": "@cobusgreyling/loop-init",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Scaffold loop engineering starters into your project by pattern and tool.",
   "type": "module",
   "bin": {

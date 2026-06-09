@@ -1,5 +1,6 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { execSync } from 'node:child_process';
 
 export interface LoopSignals {
   stateFile: { present: boolean; paths: string[] };
@@ -15,6 +16,7 @@ export interface LoopSignals {
   mcp: { present: boolean };
   worktreeEvidence: { present: boolean };
   registry: { present: boolean };
+  loopActivity: { present: boolean; evidence: string[] };
 }
 
 export interface Finding {
@@ -104,6 +106,74 @@ async function findSkills(root: string): Promise<string[]> {
   return found;
 }
 
+async function detectLoopActivity(root: string): Promise<{ present: boolean; evidence: string[] }> {
+  const evidence: string[] = [];
+  const stateCandidates = [...STATE_FILES, 'STATE.md'];
+
+  // 1. Look for "Last run" timestamps or dated entries inside state files (strong real-usage signal)
+  for (const sf of stateCandidates) {
+    try {
+      const p = path.join(root, sf);
+      if (await fileExists(p)) {
+        const txt = await readFile(p, 'utf8');
+        if (/last\s*run|last updated|^\s*-\s*\d{4}-\d{2}-\d{2}/im.test(txt) || /triage|loop run|changelog drafter/i.test(txt)) {
+          evidence.push(`state:${sf}`);
+        }
+      }
+    } catch {}
+  }
+
+  // 2. Presence of run log artifacts or dedicated log templates being used
+  const logHints = ['loop-run-log', 'run-log', 'loop.log', 'audit-report'];
+  try {
+    const entries = await readdir(root, { withFileTypes: true });
+    for (const e of entries) {
+      if (e.isFile() && logHints.some(h => e.name.toLowerCase().includes(h))) {
+        evidence.push(`log:${e.name}`);
+      }
+    }
+  } catch {}
+
+  // 3. Workflow or LOOP evidence of scheduled execution
+  try {
+    const wfDir = path.join(root, '.github', 'workflows');
+    if (await fileExists(wfDir)) {
+      const wfs = await readdir(wfDir);
+      if (wfs.some(w => /triage|changelog|daily|loop|audit|pr-babysit/i.test(w))) {
+        evidence.push('github:loop-workflows');
+      }
+    }
+  } catch {}
+
+  // 4. Light git history scan for loop-related commits (best dynamic proof)
+  try {
+    const log = execSync('git log --oneline -25 -- .', {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      timeout: 1500,
+    });
+    const lower = log.toLowerCase();
+    if (/state\.md|loop| t riage |changelog-drafter|post-merge|daily triage|audit/i.test(lower)) {
+      const firstMatch = log.trim().split('\n')[0] || '';
+      evidence.push(`git:${firstMatch.slice(0, 60)}`);
+    }
+  } catch {
+    // git not available or not a repo — ignore gracefully
+  }
+
+  // 5. Check LOOP.md or a state for explicit "Last run" human-readable proof
+  try {
+    const loopP = path.join(root, 'LOOP.md');
+    if (await fileExists(loopP)) {
+      const txt = await readFile(loopP, 'utf8');
+      if (/last run|cadence|scheduled|automation/i.test(txt)) evidence.push('LOOP.md:active');
+    }
+  } catch {}
+
+  return { present: evidence.length > 0, evidence: Array.from(new Set(evidence)).slice(0, 4) };
+}
+
 export function computeScore(signals: LoopSignals): { score: number; level: 'L0' | 'L1' | 'L2' | 'L3'; assessment: string } {
   let score = 10;
 
@@ -121,11 +191,13 @@ export function computeScore(signals: LoopSignals): { score: number; level: 'L0'
   if (signals.mcp.present) score += 3;
   if (signals.worktreeEvidence.present) score += 3;
   if (signals.registry.present) score += 2;
+  if (signals.loopActivity.present) score += 6; // dynamic proof the loops are actually being exercised
 
   score = Math.min(100, Math.max(0, score));
 
   let level: 'L0' | 'L1' | 'L2' | 'L3' = 'L0';
-  if (score >= 78 && signals.verifier.present && signals.stateFile.present) level = 'L3';
+  const hasRealActivity = signals.loopActivity.present;
+  if (score >= 78 && signals.verifier.present && signals.stateFile.present && hasRealActivity) level = 'L3';
   else if (score >= 58 && signals.triage.present) level = 'L2';
   else if (score >= 38 && signals.stateFile.present) level = 'L1';
   else level = 'L0';
@@ -207,6 +279,9 @@ export async function auditProject(target: string): Promise<AuditResult> {
 
   const registryPresent = await fileExists(path.join(root, 'patterns', 'registry.yaml'));
 
+  // Dynamic real-world usage evidence (the key new v1.4 signal)
+  const loopActivity = await detectLoopActivity(root);
+
   const signals: LoopSignals = {
     stateFile: { present: statePaths.length > 0, paths: statePaths },
     loopConfig: { present: loopMd, path: loopMd ? 'LOOP.md' : undefined },
@@ -221,6 +296,7 @@ export async function auditProject(target: string): Promise<AuditResult> {
     mcp: { present: mcpPresent },
     worktreeEvidence: { present: worktreeEvidence },
     registry: { present: registryPresent },
+    loopActivity,
   };
 
   if (!signals.stateFile.present) {
@@ -289,6 +365,14 @@ export async function auditProject(target: string): Promise<AuditResult> {
   if (!signals.registry.present) {
     findings.push({ level: 'warn', message: 'No patterns/registry.yaml (machine-readable index for future tools).' });
     recommendations.push('Add patterns/registry.yaml following the existing format');
+  }
+
+  // New dynamic activity signal (v1.4)
+  if (!signals.loopActivity.present) {
+    findings.push({ level: 'warn', message: 'No evidence of actual loop runs detected (no "Last run" entries in state, loop-related git activity, or scheduled workflows yet).' });
+    recommendations.push('Run one loop (report-only), update + commit STATE.md (or pattern state). This turns structure into proven usage.');
+  } else {
+    findings.push({ level: 'ok', message: `Loop activity detected — real usage signals present (${signals.loopActivity.evidence.length} sources).` });
   }
 
   const { score, level, assessment } = computeScore(signals);

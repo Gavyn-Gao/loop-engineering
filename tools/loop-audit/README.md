@@ -2,6 +2,8 @@
 
 CLI that scores a project's **Loop Readiness** (0–100) and suggests next steps.
 
+**npx @cobusgreyling/loop-audit . --suggest** works immediately (published package).
+
 ## Install & Run
 
 **npm (recommended):**
@@ -34,7 +36,7 @@ bash scripts/before-after-demo.sh
 loop-audit .              # human-readable (default)
 loop-audit . --json       # machine-readable
 loop-audit . --md         # markdown report
-loop-audit . --suggest    # copy-from-template commands (all tools)
+loop-audit . --suggest    # copy-from-template commands + activity tips (all tools)
 ```
 
 Exit code `2` if score < 40 (useful for CI gates once your project is loop-ready).
@@ -49,7 +51,7 @@ npm run build
 npm publish --access public
 ```
 
-## Signals Checked (v1.2+)
+## Signals Checked (v1.4+)
 
 | Signal                  | Notes |
 |-------------------------|-------|
@@ -63,6 +65,7 @@ npm publish --access public
 | MCP / connectors        | Mentions or config files |
 | Worktree evidence       | Isolation patterns in docs |
 | patterns/registry.yaml  | Machine index for tooling |
+| **loopActivity (new)**  | **Dynamic proof**: "Last run" timestamps in state, loop-related git commits, scheduled workflows, run logs. This is what separates "configured on paper" from "actually running loops". L3 now requires it. |
 
 ## Levels
 
