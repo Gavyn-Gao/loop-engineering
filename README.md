@@ -1,5 +1,14 @@
 # Loop Engineering
 
+
+<p align="center">
+  <img src="assets/cobus-greyling.jpg" alt="Cobus Greyling" width="420" />
+  <br>
+  <sub>Personal photo • Brand visuals below</sub>
+</p>
+
+</p>
+
 <p align="center">
   <a href="https://cobusgreyling.github.io/loop-engineering/">
     <img src="https://img.shields.io/badge/✨_Explore_the_Showcase-Design_systems_that_prompt_your_agents-0d1117?style=for-the-badge&labelColor=111a28&color=3ee8c5" alt="Explore the Showcase" />
@@ -20,11 +29,6 @@
   <strong><a href="https://cobusgreyling.github.io/loop-engineering/">→ cobusgreyling.github.io/loop-engineering</a></strong>
 </p>
 
-<p align="center">
-  <img src="assets/cobus-greyling.jpg" alt="Cobus Greyling" width="420" />
-  <br>
-  <sub>Personal photo • Brand visuals below</sub>
-</p>
 
 
 
