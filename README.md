@@ -35,12 +35,15 @@ A loop is a recursive goal: you define a purpose and the AI iterates (often with
 
 <p align="center">
   <strong><a href="https://cobusgreyling.github.io/loop-engineering/">→ cobusgreyling.github.io/loop-engineering</a></strong>
+  <br>
+  <strong><a href="https://cobusgreyling.substack.com/p/loop-engineering">→ Read the Loop Engineering essay on Substack</a></strong>
 </p>
 
 ## Quick Links
 
 | Start here | Description |
 |------------|-------------|
+| [Loop Engineering essay](https://cobusgreyling.substack.com/p/loop-engineering) | The concept, primitives, and Grok mapping — **read this first** |
 | [Pattern Picker](docs/pattern-picker.md) | Which loop to run first — **start here if unsure** |
 | [Primitives Matrix](docs/primitives-matrix.md) | Grok vs Claude Code vs Codex — bookmark this |
 | [Loop Design Checklist](docs/loop-design-checklist.md) | Ship readiness rubric |
@@ -167,6 +170,7 @@ Share production patterns, tool mappings, and failure stories. See [CONTRIBUTING
 
 ## Sources
 
+- [Cobus Greyling – Loop Engineering (Substack)](https://cobusgreyling.substack.com/p/loop-engineering)
 - [Addy Osmani – Loop Engineering](https://addyosmani.com/blog/loop-engineering/)
 - [Attribution & further reading](resources/sources.md)
 
