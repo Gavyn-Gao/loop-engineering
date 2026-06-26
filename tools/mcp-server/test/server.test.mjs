@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { spawn } from 'node:child_process';
 
 import {
   resolveProjectRoot,
@@ -101,6 +103,60 @@ async function setup() {
 
 async function cleanup() {
   if (tmpRoot) await rm(tmpRoot, { recursive: true, force: true });
+}
+
+const SERVER_ENTRY = fileURLToPath(new URL('../dist/index.js', import.meta.url));
+
+// Spawns the real MCP server over stdio, performs the initialize handshake,
+// sends the given requests, and returns the collected JSON-RPC responses
+// keyed by id. Exercises the index.ts resource/tool handlers end-to-end.
+async function callServer(root, requests) {
+  const child = spawn(process.execPath, [SERVER_ENTRY], {
+    env: { ...process.env, LOOP_PROJECT_ROOT: root },
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+
+  const responses = new Map();
+  const wantedIds = new Set(requests.map(r => r.id));
+  let buffer = '';
+
+  const done = new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      child.kill();
+      reject(new Error('server did not respond in time'));
+    }, 10_000);
+
+    child.stdout.on('data', (chunk) => {
+      buffer += chunk.toString();
+      let idx;
+      while ((idx = buffer.indexOf('\n')) !== -1) {
+        const line = buffer.slice(0, idx).trim();
+        buffer = buffer.slice(idx + 1);
+        if (!line) continue;
+        const msg = JSON.parse(line);
+        if (msg.id !== undefined && wantedIds.has(msg.id)) {
+          responses.set(msg.id, msg);
+          if (responses.size === wantedIds.size) {
+            clearTimeout(timer);
+            child.kill();
+            resolve(responses);
+          }
+        }
+      }
+    });
+    child.on('error', reject);
+  });
+
+  child.stdin.write(JSON.stringify({
+    jsonrpc: '2.0', id: 0, method: 'initialize',
+    params: { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'test', version: '1.0' } },
+  }) + '\n');
+  child.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n');
+  for (const req of requests) {
+    child.stdin.write(JSON.stringify({ jsonrpc: '2.0', ...req }) + '\n');
+  }
+
+  return done;
 }
 
 // ── Tests ──────────────────────────────────────────────────────────
@@ -266,6 +322,65 @@ test('loadPatternDoc returns null for missing pattern', async () => {
   try {
     const doc = await loadPatternDoc(root, 'nonexistent');
     assert.equal(doc, null);
+  } finally {
+    await cleanup();
+  }
+});
+
+// ── Integration: real server over stdio ────────────────────────────
+
+test('server lists all tools over stdio', async () => {
+  const root = await setup();
+  try {
+    const res = await callServer(root, [{ id: 1, method: 'tools/list', params: {} }]);
+    const names = res.get(1).result.tools.map(t => t.name);
+    assert.equal(names.length, 8);
+    assert.ok(names.includes('loop_list_patterns'));
+    assert.ok(names.includes('loop_estimate_cost'));
+  } finally {
+    await cleanup();
+  }
+});
+
+test('loop_list_patterns tool returns registry patterns', async () => {
+  const root = await setup();
+  try {
+    const res = await callServer(root, [{
+      id: 1, method: 'tools/call',
+      params: { name: 'loop_list_patterns', arguments: {} },
+    }]);
+    const text = res.get(1).result.content[0].text;
+    const parsed = JSON.parse(text);
+    assert.equal(parsed[0].id, 'daily-triage');
+  } finally {
+    await cleanup();
+  }
+});
+
+test('loop_estimate_cost tool computes a cost table', async () => {
+  const root = await setup();
+  try {
+    const res = await callServer(root, [{
+      id: 1, method: 'tools/call',
+      params: { name: 'loop_estimate_cost', arguments: { patternId: 'daily-triage', level: 'L2' } },
+    }]);
+    const text = res.get(1).result.content[0].text;
+    assert.ok(text.includes('Cost Estimate'));
+    assert.ok(text.includes('runs/day'));
+  } finally {
+    await cleanup();
+  }
+});
+
+test('pattern resource is readable over stdio', async () => {
+  const root = await setup();
+  try {
+    const res = await callServer(root, [{
+      id: 1, method: 'resources/read',
+      params: { uri: 'loop://patterns/daily-triage' },
+    }]);
+    const text = res.get(1).result.contents[0].text;
+    assert.ok(text.includes('# Daily Triage'));
   } finally {
     await cleanup();
   }
