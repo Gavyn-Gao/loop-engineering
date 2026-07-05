@@ -1,81 +1,33 @@
-# LOOP.md — Loop Engineering Reference
-
-This file documents how the **loop-engineering** reference repository is operated with loop engineering patterns.
-
-The goal of this repo is to be the canonical, copyable, high-signal collection of patterns, starters, and tooling. It eats its own dogfood aggressively.
+# Loop Configuration — Minimal Triage (Codex)
 
 ## Active Loops
 
-### Daily Triage (L1 — automated + report)
-- Cadence: 1d weekdays (`/.github/workflows/daily-triage.yml`)
-- Skill: `loop-triage` (from `skills/` and `starters/minimal-loop`)
-- State: `STATE.md` (updated by workflow; human reviews weekly issue)
-- Phase: Report-only. Human reviews and decides actions.
-- Handoff: Design decisions, large refactors, new pattern acceptance.
+| Pattern | Cadence | Status | Automation prompt |
+|---------|---------|--------|-------------------|
+| Daily Triage | 1d | L2 assisted | `Run $loop-triage. Read STATE.md. Implement one small fix in an isolated branch, then require verifier approval before PR.` |
 
-### PR Babysitter (L2 — assisted, manual trigger)
-- Cadence: 10–15m during active hours (maintainer `/loop` or future Action)
-- Starter: `starters/pr-babysitter` (Grok, Claude Code, Codex)
-- Worktrees for suggested fixes; verifier required; no auto-merge by default.
+## Human Gates
 
-### Dependency Sweeper (L2 — patch-only)
-- Cadence: 6h–1d
-- Starter: `starters/dependency-sweeper`
-- Patch + low-risk CVE only for first 30 days
-- Verifier = full `npm ci && npm test` in worktree
-- Human gate on majors and denylisted packages
-
-### CI Sweeper / Post-Merge (opportunistic)
-- `validate-patterns.yml` + `audit.yml` dogfood pattern validation and readiness scoring
-- `audit.yml` posts loop readiness scores on PRs
-- Future: sweeper reacting to failing validate/audit runs
-
-### Changelog Drafter (L1 — draft only, high value)
-- Cadence: 1d or on release prep (manual or tag-triggered)
-- Starter: `starters/changelog-drafter`
-- Produces `RELEASE_NOTES_DRAFT.md` (or section for GitHub release). Human approves before publish or CHANGELOG update.
-- Excellent low-risk companion to Post-Merge Cleanup. This reference repo should run it for future releases.
-
-## Multi-loop coordination
-
-See [docs/multi-loop.md](docs/multi-loop.md). Priority: CI Sweeper → PR Babysitter → Dependency Sweeper → Post-Merge / Changelog Drafter (off-peak) → Daily Triage (report).
+- Auto-fix allowed only for one small, low-risk item at a time
+- Human approval required before merge
+- All high-risk paths: human review required (see docs/safety.md denylist)
 
 ## Worktrees
 
-- Any unattended code-change experiment runs in an **isolated git worktree** per attempt.
-- One worktree per fix; discard after verifier REJECT or human escalation.
+- Codex provides a built-in worktree per thread — use it for L2+ fix attempts.
+- One fix per worktree; verifier subagent must APPROVE before proposing a PR.
 
 ## Connectors (MCP)
 
-- Optional for L1 daily triage — see [examples/mcp/](examples/mcp/)
-- GitHub MCP read-only for issue/PR discovery
-- Scope connectors to read + comment until the loop is trusted
+- MCP optional for L1 report-only loops.
+- For L2+: GitHub connector to read CI/issues; write scope limited to comments until trusted.
 
-## Budget & Observability
+## Budget
 
-- Token caps: `loop-budget.md`
-- Run history: `loop-run-log.md` (appended each weekday run by `daily-triage.yml`)
-- Estimate: `npx @cobusgreyling/loop-cost --pattern daily-triage`
-- Kill switch: `loop-pause-all` label or flag in `STATE.md`
+- Max sub-agent spawns per run: 1 verifier (L2)
+- Review STATE.md daily + Codex Triage inbox
 
-## Safety & Gates (this repo)
+## Links
 
-- No auto-merge on main except trivial dependency patches (allowlist + verifier)
-- Denylist: showcase HTML/CSS, core primitives docs, audit scoring logic without human review
-- Live loop state: `STATE.md` at repo root
-
-## How to run locally
-
-```bash
-node tools/loop-audit/dist/cli.js . --suggest
-npx @cobusgreyling/loop-init . --pattern daily-triage --tool grok  # after npm publish
-bash scripts/before-after-demo.sh
-```
-
-## Evolution
-
-Journey recorded in `stories/`. Target: solid L2 with excellent observability.
-
----
-
-*This file is both documentation and the seed for the loops that maintain the reference.*
+- Pattern: [daily-triage](../../patterns/daily-triage.md)
+- Checklist: [loop-design-checklist](../../docs/loop-design-checklist.md)
