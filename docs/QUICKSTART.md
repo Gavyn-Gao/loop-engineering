@@ -22,6 +22,12 @@ Run this in the root of any git project (no clone required):
 npx @cobusgreyling/loop-init . --pattern daily-triage --tool grok
 ```
 
+On Windows PowerShell, if `npx` is blocked by an `npm.ps1` execution-policy error, run the same command with `npx.cmd`:
+
+```powershell
+npx.cmd @cobusgreyling/loop-init . --pattern daily-triage --tool grok
+```
+
 Swap `--pattern` for any pattern from [patterns/registry.yaml](../patterns/registry.yaml). List all patterns:
 
 ```bash
