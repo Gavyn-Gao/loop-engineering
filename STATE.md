@@ -1,13 +1,10 @@
 # Loop State — loop-engineering fork
 
-Last run: 2026-07-05 15:11 +08:00
+Last run: 2026-07-05 15:25 +08:00
 
 ## High Priority (loop is acting or waiting on human)
 
-- [Issue #3](https://github.com/Gavyn-Gao/loop-engineering/issues/3) — 临时记录：某个命令在 Windows 下报错，待排查
-  - Why it matters: Windows setup friction blocks learners from starting the loop course smoothly.
-  - Suggested next action: keep this visible for L2 as a candidate for a small, human-approved fix or doc note.
-  - Effort: small.
+- None. L2 assisted fix for [Issue #3](https://github.com/Gavyn-Gao/loop-engineering/issues/3) was approved and merged via [PR #4](https://github.com/Gavyn-Gao/loop-engineering/pull/4).
 
 ## Watch List
 
@@ -23,9 +20,9 @@ Last run: 2026-07-05 15:11 +08:00
 
 ## Recent Noise (ignored this run)
 
-- Open PRs: none found in `Gavyn-Gao/loop-engineering`.
+- Open PRs: none found in `Gavyn-Gao/loop-engineering` after merging PR #4.
 - Recent CI runs: none found in `Gavyn-Gao/loop-engineering`.
-- Local repository changes are loop setup artifacts only: `LOOP.md`, `STATE.md`, `loop-constraints.md`, and Codex/Claude loop scaffolding.
+- L2 worktree branch `docs/windows-npx-cmd-note` was cleaned up locally and remotely after merge.
 
 ---
-Run log: L1 report-only triage scanned GitHub issues, open PRs, and recent CI status for `Gavyn-Gao/loop-engineering`. The human-gate exercise deleted Issue #1 from STATE.md, then the next scan rediscovered it from GitHub. No code files were edited.
+Run log: L2 assisted run selected Issue #3, made the smallest possible docs fix in an isolated worktree, verifier approved after `git diff --check`, `npm install`, and `npm run validate:registry`, then the human approved and merged PR #4 with squash merge. L2 complete.
